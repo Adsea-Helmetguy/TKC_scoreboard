@@ -12,6 +12,7 @@ type Player = {
 type MatchState = {
   id: string;
   eventName: string;
+  gameTitle: string;
   round: string;
   bestOf: string;
   left: Player;
@@ -57,9 +58,36 @@ const STORAGE_KEY = "tkc-scoreboard-state";
 const RECORDINGS_KEY = "tkc-match-recordings";
 const CHANNEL_NAME = "tkc-scoreboard-updates";
 
+const gameRosters: Record<string, string[]> = {
+  "Street Fighter 6": ["Ryu", "Ken", "Chun-Li", "Luke"],
+  "Tekken 8": ["Jin", "Kazuya", "King", "Nina"],
+  "Under Night In-Birth II Sys:Celes": [
+    "Hyde",
+    "Linne",
+    "Waldstein",
+    "Carmine",
+    "Orie",
+    "Gordeau",
+    "Merkava",
+    "Vatista",
+    "Seth",
+    "Yuzuriha",
+    "Hilda",
+    "Chaos",
+    "Nanase",
+    "Byakuya",
+    "Phonon",
+    "Mika",
+    "Wagner",
+    "Enkidu",
+    "Londrekia",
+  ],
+};
+
 const defaultState: MatchState = {
   id: "tkc-main",
   eventName: "TKC Local",
+  gameTitle: "",
   round: "Grand Finals",
   bestOf: "Best of 5",
   left: {
@@ -166,6 +194,7 @@ function App() {
     null,
   );
   const [obsElapsedSeconds, setObsElapsedSeconds] = useState(0);
+  const [isGameMenuOpen, setIsGameMenuOpen] = useState(false);
   const activeRecording = recordings.find((recording) => !recording.endedAt);
   const recordingGroups = useMemo<RecordingGroup[]>(() => {
     return recordings.reduce<RecordingGroup[]>((groups, recording) => {
@@ -399,10 +428,7 @@ function App() {
     return <ScoreboardOverlay match={match} />;
   }
 
-  const gameRosters = {
-    "Street Fighter 6": ["Ryu", "Ken", "Chun-Li", "Luke"],
-    "Tekken 8": ["Jin", "Kazuya", "King", "Nina"],
-  };
+  const activeRoster = gameRosters[draft.gameTitle] ?? [];
 
   return (
     <main className="app-shell">
@@ -481,14 +507,47 @@ function App() {
                 }
               />
             </label>
-            <label>
+            <label className="game-title-field">
               Game Title
-              <input
-                value={draft.id}
-                onChange={(event) =>
-                  setDraft({ ...draft, id: event.target.value })
-                }
-              />
+              <div className="game-title-input-row">
+                <input
+                  value={draft.gameTitle}
+                  onBlur={() =>
+                    window.setTimeout(() => setIsGameMenuOpen(false), 120)
+                  }
+                  onChange={(event) => {
+                    setDraft({ ...draft, gameTitle: event.target.value });
+                    setIsGameMenuOpen(false);
+                  }}
+                />
+                <button
+                  type="button"
+                  aria-label={
+                    isGameMenuOpen ? "Hide game list" : "Show game list"
+                  }
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => setIsGameMenuOpen((isOpen) => !isOpen)}
+                >
+                  {isGameMenuOpen ? "Hide" : "List"}
+                </button>
+              </div>
+              {isGameMenuOpen && (
+                <div className="game-title-menu">
+                  {Object.keys(gameRosters).map((gameTitle) => (
+                    <button
+                      key={gameTitle}
+                      type="button"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => {
+                        setDraft({ ...draft, gameTitle });
+                        setIsGameMenuOpen(false);
+                      }}
+                    >
+                      {gameTitle}
+                    </button>
+                  ))}
+                </div>
+              )}
             </label>
           </div>
 
@@ -496,12 +555,14 @@ function App() {
             <PlayerEditor
               side="left"
               player={draft.left}
+              roster={activeRoster}
               onUpdate={updatePlayer}
               onScore={changeScore}
             />
             <PlayerEditor
               side="right"
               player={draft.right}
+              roster={activeRoster}
               onUpdate={updatePlayer}
               onScore={changeScore}
             />
@@ -625,11 +686,18 @@ function App() {
 type PlayerEditorProps = {
   side: PlayerSide;
   player: Player;
+  roster: string[];
   onUpdate: (side: PlayerSide, player: Partial<Player>) => void;
   onScore: (side: PlayerSide, amount: number) => void;
 };
 
-function PlayerEditor({ side, player, onUpdate, onScore }: PlayerEditorProps) {
+function PlayerEditor({
+  side,
+  player,
+  roster,
+  onUpdate,
+  onScore,
+}: PlayerEditorProps) {
   return (
     <section className="player-editor">
       <div className="player-editor-title">
@@ -645,12 +713,28 @@ function PlayerEditor({ side, player, onUpdate, onScore }: PlayerEditorProps) {
       </label>
       <label>
         Character
-        <input
-          value={player.character}
-          onChange={(event) =>
-            onUpdate(side, { character: event.target.value })
-          }
-        />
+        {roster.length > 0 ? (
+          <select
+            value={player.character}
+            onChange={(event) =>
+              onUpdate(side, { character: event.target.value })
+            }
+          >
+            <option value="">Select character</option>
+            {roster.map((character) => (
+              <option key={character} value={character}>
+                {character}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <input
+            value={player.character}
+            onChange={(event) =>
+              onUpdate(side, { character: event.target.value })
+            }
+          />
+        )}
       </label>
       <div
         className="score-controls"

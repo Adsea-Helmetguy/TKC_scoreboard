@@ -165,6 +165,52 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
+.game-title-field {
+  position: relative;
+}
+
+.game-title-input-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.game-title-input-row button {
+  min-width: 62px;
+  min-height: 44px;
+  padding: 0 12px;
+  background: #3a3b45;
+  font-size: 13px;
+}
+
+.game-title-menu {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 6px);
+  right: 0;
+  left: 0;
+  display: grid;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  background: #17181f;
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.35);
+}
+
+.game-title-menu button {
+  min-height: 40px;
+  border-radius: 0;
+  padding: 0 12px;
+  background: transparent;
+  text-align: left;
+  font-weight: 800;
+}
+
+.game-title-menu button:hover {
+  background: #641113;
+  filter: none;
+}
+
 .player-editor {
   padding: 18px;
 }
