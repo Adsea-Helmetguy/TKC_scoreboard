@@ -290,6 +290,72 @@ button:hover {
   gap: 12px;
 }
 
+.history-heading {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.history-heading h2 {
+  white-space: nowrap;
+}
+
+.history-day {
+  display: grid;
+  gap: 10px;
+}
+
+.history-day summary {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 10px;
+  border-radius: 6px;
+  padding: 10px 12px;
+  color: #d7a7a6;
+  background: #17181f;
+  cursor: pointer;
+  list-style: none;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.history-day summary::-webkit-details-marker {
+  display: none;
+}
+
+.history-day summary::before {
+  content: "+";
+  color: #f7f2ef;
+}
+
+.history-day[open] summary::before {
+  content: "-";
+}
+
+.history-day summary {
+  grid-template-columns: auto 1fr auto;
+}
+
+.history-day summary small {
+  color: #bfb8b4;
+  font-size: 12px;
+}
+
+.clear-history-button {
+  min-height: 36px;
+  padding: 0 12px;
+  background: #3a3b45;
+  font-size: 13px;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .history-item {
   display: grid;
   gap: 4px;

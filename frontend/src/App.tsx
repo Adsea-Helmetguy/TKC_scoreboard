@@ -23,8 +23,16 @@ type MatchRecording = {
   id: string;
   startedAt: string;
   endedAt?: string;
+  startedTimelineSeconds?: number;
+  endedTimelineSeconds?: number;
   startedState: MatchState;
   endedState?: MatchState;
+};
+
+type RecordingGroup = {
+  dateKey: string;
+  dateLabel: string;
+  recordings: MatchRecording[];
 };
 
 type ObsStatus = {
@@ -102,23 +110,36 @@ function formatTime(value: string) {
   }).format(new Date(value));
 }
 
+function formatDateKey(value: string) {
+  const date = new Date(value);
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, "0");
+  const day = date.getDate().toString().padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function formatDateLabel(value: string) {
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "full",
+  }).format(new Date(value));
+}
+
 function clampScore(score: number) {
   return Math.max(0, Math.min(99, score));
 }
 
-function getDuration(startedAt: string, endedAt?: string) {
+function getDurationSeconds(startedAt: string, endedAt?: string) {
   if (!endedAt) {
-    return "Recording";
+    return 0;
   }
 
-  const duration = Math.max(
+  return Math.max(
     0,
-    Math.round((new Date(endedAt).getTime() - new Date(startedAt).getTime()) / 1000),
+    Math.round(
+      (new Date(endedAt).getTime() - new Date(startedAt).getTime()) / 1000,
+    ),
   );
-  const minutes = Math.floor(duration / 60);
-  const seconds = duration % 60;
-
-  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
 function formatClock(totalSeconds: number) {
@@ -146,6 +167,26 @@ function App() {
   );
   const [obsElapsedSeconds, setObsElapsedSeconds] = useState(0);
   const activeRecording = recordings.find((recording) => !recording.endedAt);
+  const recordingGroups = useMemo<RecordingGroup[]>(() => {
+    return recordings.reduce<RecordingGroup[]>((groups, recording) => {
+      const dateKey = formatDateKey(recording.startedAt);
+      const existingGroup = groups.find((group) => group.dateKey === dateKey);
+
+      if (existingGroup) {
+        existingGroup.recordings.push(recording);
+        return groups;
+      }
+
+      return [
+        ...groups,
+        {
+          dateKey,
+          dateLabel: formatDateLabel(recording.startedAt),
+          recordings: [recording],
+        },
+      ];
+    }, []);
+  }, [recordings]);
 
   useEffect(() => {
     const channel = new BroadcastChannel(CHANNEL_NAME);
@@ -260,11 +301,17 @@ function App() {
     setRecordings(trimmedRecordings);
   }
 
+  function clearRecordings() {
+    localStorage.removeItem(RECORDINGS_KEY);
+    setRecordings([]);
+  }
+
   function startMatch() {
     const startedAt = new Date().toISOString();
     const recording: MatchRecording = {
       id: crypto.randomUUID(),
       startedAt,
+      startedTimelineSeconds: obsElapsedSeconds,
       startedState: {
         ...draft,
         updatedAt: startedAt,
@@ -288,6 +335,7 @@ function App() {
       return {
         ...recording,
         endedAt,
+        endedTimelineSeconds: obsElapsedSeconds,
         endedState: {
           ...draft,
           updatedAt: endedAt,
@@ -328,9 +376,33 @@ function App() {
     }));
   }
 
+  function getRecordingTimeline(recording: MatchRecording) {
+    const startSeconds = recording.startedTimelineSeconds ?? 0;
+    const endSeconds =
+      recording.endedTimelineSeconds ??
+      (recording.endedAt
+        ? startSeconds +
+          getDurationSeconds(recording.startedAt, recording.endedAt)
+        : obsElapsedSeconds);
+
+    return `${formatClock(startSeconds)} - ${formatClock(endSeconds)}`;
+  }
+
+  function getPlayerTimelineLabel(player: Player, fallbackName: string) {
+    const name = player.name || fallbackName;
+    const character = player.character || "Unknown";
+
+    return `${name}(${character})`;
+  }
+
   if (isOverlay) {
     return <ScoreboardOverlay match={match} />;
   }
+
+  const gameRosters = {
+    "Street Fighter 6": ["Ryu", "Ken", "Chun-Li", "Luke"],
+    "Tekken 8": ["Jin", "Kazuya", "King", "Nina"],
+  };
 
   return (
     <main className="app-shell">
@@ -409,6 +481,15 @@ function App() {
                 }
               />
             </label>
+            <label>
+              Game Title
+              <input
+                value={draft.id}
+                onChange={(event) =>
+                  setDraft({ ...draft, id: event.target.value })
+                }
+              />
+            </label>
           </div>
 
           <div className="players-grid">
@@ -478,7 +559,9 @@ function App() {
             )}
             <button
               type="button"
-              className={activeRecording ? "record-button is-recording" : "record-button"}
+              className={
+                activeRecording ? "record-button is-recording" : "record-button"
+              }
               onClick={activeRecording ? endMatch : startMatch}
             >
               {activeRecording ? "End match" : "Start match"}
@@ -486,29 +569,50 @@ function App() {
           </div>
 
           <div className="history-list">
-            <div>
-              <p className="eyebrow">Audit Log</p>
-              <h2>Recorded matches</h2>
+            <div className="history-heading">
+              <div>
+                <p className="eyebrow">Audit Log</p>
+                <h2>Recorded matches</h2>
+              </div>
+              <button
+                type="button"
+                className="clear-history-button"
+                onClick={clearRecordings}
+                disabled={recordings.length === 0}
+              >
+                Clear history
+              </button>
             </div>
             {recordings.length === 0 ? (
               <p className="empty-state">No matches recorded yet.</p>
             ) : (
-              recordings.map((recording) => (
-                <article className="history-item" key={recording.id}>
-                  <strong>
-                    {recording.startedState.left.name || "Player 1"} vs{" "}
-                    {recording.startedState.right.name || "Player 2"}
-                  </strong>
-                  <span>
-                    {formatTime(recording.startedAt)}
-                    {recording.endedAt ? ` - ${formatTime(recording.endedAt)}` : ""}
-                  </span>
-                  <small>
-                    {recording.startedState.left.character || "Unknown"} vs{" "}
-                    {recording.startedState.right.character || "Unknown"} |{" "}
-                    {getDuration(recording.startedAt, recording.endedAt)}
-                  </small>
-                </article>
+              recordingGroups.map((group) => (
+                <details
+                  className="history-day"
+                  key={group.dateKey}
+                  open={group === recordingGroups[0]}
+                >
+                  <summary>
+                    <span>{group.dateLabel}</span>
+                    <small>{group.recordings.length} matches</small>
+                  </summary>
+                  {group.recordings.map((recording) => (
+                    <article className="history-item" key={recording.id}>
+                      <strong className="timeline-entry">
+                        {getRecordingTimeline(recording)} |{" "}
+                        {getPlayerTimelineLabel(
+                          recording.startedState.left,
+                          "Player 1",
+                        )}{" "}
+                        vs{" "}
+                        {getPlayerTimelineLabel(
+                          recording.startedState.right,
+                          "Player 2",
+                        )}
+                      </strong>
+                    </article>
+                  ))}
+                </details>
               ))
             )}
           </div>
