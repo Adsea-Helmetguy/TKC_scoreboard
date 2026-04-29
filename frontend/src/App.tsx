@@ -85,20 +85,20 @@ const gameRosters: Record<string, string[]> = {
 };
 
 const defaultState: MatchState = {
-  id: "tkc-main",
-  eventName: "TKC Local",
+  id: "sea-main",
+  eventName: "SEA-INBIRTHS Online Tournament",
   gameTitle: "",
-  round: "Grand Finals",
+  round: "Round 1",
   bestOf: "Best of 5",
   left: {
-    name: "division",
-    score: 2,
-    character: "Ken",
+    name: "",
+    score: 0,
+    character: "",
   },
   right: {
-    name: "marc",
-    score: 2,
-    character: "Luke",
+    name: "",
+    score: 0,
+    character: "",
   },
   updatedAt: new Date().toISOString(),
 };
@@ -434,11 +434,11 @@ function App() {
     <main className="app-shell">
       <header className="topbar">
         <div>
-          <h1>Fighting Game Scoreboard</h1>
+          <h1>Tournament Scoreboard</h1>
         </div>
-        <div className="connection-pill">
+        <div className={`connection-pill ${!obsAvailable ? "is-disconnected" : ""}`}>
           <span className="status-dot" aria-hidden="true"></span>
-          OBS Browser Source Ready
+          {obsAvailable ? "OBS Browser Source Ready" : "OBS Browser Source Disconnected"}
         </div>
       </header>
 
