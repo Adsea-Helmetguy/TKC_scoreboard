@@ -81,7 +81,13 @@ h2 {
 .preview-band-header {
   display: grid;
   grid-template-columns: minmax(240px, 420px);
+  justify-content: center;
   margin-bottom: 16px;
+}
+
+.preview-band-header label,
+.preview-band-header input {
+  text-align: center;
 }
 
 .workspace {
@@ -242,6 +248,41 @@ button:hover {
 
 .helper-text {
   margin: 14px 0 28px;
+}
+
+.recording-controls {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.obs-clock {
+  display: grid;
+  min-height: 64px;
+  place-items: center;
+  border-radius: 6px;
+  color: #fff;
+  background: #17181f;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 34px;
+  font-weight: 900;
+}
+
+.recording-state {
+  margin: 0;
+  color: #d8d3d0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.record-button {
+  width: 100%;
+  background: #9d272a;
+}
+
+.record-button.is-recording {
+  background: #f0eee9;
+  color: #641113;
 }
 
 .history-list {

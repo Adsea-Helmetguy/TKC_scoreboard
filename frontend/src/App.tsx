@@ -19,14 +19,34 @@ type MatchState = {
   updatedAt: string;
 };
 
-type AuditEntry = {
+type MatchRecording = {
   id: string;
-  changedAt: string;
-  state: MatchState;
+  startedAt: string;
+  endedAt?: string;
+  startedState: MatchState;
+  endedState?: MatchState;
 };
 
+type ObsStatus = {
+  recording: boolean;
+  recordingPaused: boolean;
+  streaming: boolean;
+  replaybuffer: boolean;
+  virtualcam: boolean;
+};
+
+type ObsStudioApi = {
+  getStatus: (callback: (status: ObsStatus) => void) => void;
+};
+
+declare global {
+  interface Window {
+    obsstudio?: ObsStudioApi;
+  }
+}
+
 const STORAGE_KEY = "tkc-scoreboard-state";
-const HISTORY_KEY = "tkc-scoreboard-history";
+const RECORDINGS_KEY = "tkc-match-recordings";
 const CHANNEL_NAME = "tkc-scoreboard-updates";
 
 const defaultState: MatchState = {
@@ -61,15 +81,15 @@ function loadState(): MatchState {
   }
 }
 
-function loadHistory(): AuditEntry[] {
-  const saved = localStorage.getItem(HISTORY_KEY);
+function loadRecordings(): MatchRecording[] {
+  const saved = localStorage.getItem(RECORDINGS_KEY);
 
   if (!saved) {
     return [];
   }
 
   try {
-    return JSON.parse(saved) as AuditEntry[];
+    return JSON.parse(saved) as MatchRecording[];
   } catch {
     return [];
   }
@@ -86,12 +106,46 @@ function clampScore(score: number) {
   return Math.max(0, Math.min(99, score));
 }
 
+function getDuration(startedAt: string, endedAt?: string) {
+  if (!endedAt) {
+    return "Recording";
+  }
+
+  const duration = Math.max(
+    0,
+    Math.round((new Date(endedAt).getTime() - new Date(startedAt).getTime()) / 1000),
+  );
+  const minutes = Math.floor(duration / 60);
+  const seconds = duration % 60;
+
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+}
+
+function formatClock(totalSeconds: number) {
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  return [hours, minutes, seconds]
+    .map((value) => value.toString().padStart(2, "0"))
+    .join(":");
+}
+
 function App() {
   const isOverlay =
     new URLSearchParams(window.location.search).get("view") === "overlay";
   const [match, setMatch] = useState<MatchState>(() => loadState());
   const [draft, setDraft] = useState<MatchState>(() => loadState());
-  const [history, setHistory] = useState<AuditEntry[]>(() => loadHistory());
+  const [recordings, setRecordings] = useState<MatchRecording[]>(() =>
+    loadRecordings(),
+  );
+  const [obsAvailable] = useState(() => Boolean(window.obsstudio));
+  const [obsOutputActive, setObsOutputActive] = useState(false);
+  const [obsClockStartedAt, setObsClockStartedAt] = useState<number | null>(
+    null,
+  );
+  const [obsElapsedSeconds, setObsElapsedSeconds] = useState(0);
+  const activeRecording = recordings.find((recording) => !recording.endedAt);
 
   useEffect(() => {
     const channel = new BroadcastChannel(CHANNEL_NAME);
@@ -108,8 +162,8 @@ function App() {
         setDraft(next);
       }
 
-      if (event.key === HISTORY_KEY && event.newValue) {
-        setHistory(JSON.parse(event.newValue) as AuditEntry[]);
+      if (event.key === RECORDINGS_KEY && event.newValue) {
+        setRecordings(JSON.parse(event.newValue) as MatchRecording[]);
       }
     };
 
@@ -125,27 +179,123 @@ function App() {
     return `${window.location.origin}${window.location.pathname}?view=overlay`;
   }, []);
 
+  useEffect(() => {
+    const obs = window.obsstudio;
+
+    if (!obs) {
+      return;
+    }
+
+    const updateFromObs = () => {
+      obs.getStatus((status) => {
+        const isActive = status.recording || status.streaming;
+
+        setObsOutputActive(isActive);
+        setObsClockStartedAt((currentStartedAt) => {
+          if (isActive && currentStartedAt === null) {
+            return Date.now();
+          }
+
+          if (!isActive) {
+            setObsElapsedSeconds(0);
+            return null;
+          }
+
+          return currentStartedAt;
+        });
+      });
+    };
+
+    const handleOutputStarted = () => updateFromObs();
+    const handleOutputStopped = () => updateFromObs();
+    const statusInterval = window.setInterval(updateFromObs, 2000);
+
+    updateFromObs();
+    window.addEventListener("obsRecordingStarted", handleOutputStarted);
+    window.addEventListener("obsStreamingStarted", handleOutputStarted);
+    window.addEventListener("obsRecordingStopped", handleOutputStopped);
+    window.addEventListener("obsStreamingStopped", handleOutputStopped);
+
+    return () => {
+      window.clearInterval(statusInterval);
+      window.removeEventListener("obsRecordingStarted", handleOutputStarted);
+      window.removeEventListener("obsStreamingStarted", handleOutputStarted);
+      window.removeEventListener("obsRecordingStopped", handleOutputStopped);
+      window.removeEventListener("obsStreamingStopped", handleOutputStopped);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!obsClockStartedAt || !obsOutputActive) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      setObsElapsedSeconds(
+        Math.max(0, Math.floor((Date.now() - obsClockStartedAt) / 1000)),
+      );
+    }, 500);
+
+    return () => window.clearInterval(timer);
+  }, [obsClockStartedAt, obsOutputActive]);
+
   function saveDraft() {
     const next = {
       ...draft,
       updatedAt: new Date().toISOString(),
     };
-
-    const entry: AuditEntry = {
-      id: crypto.randomUUID(),
-      changedAt: next.updatedAt,
-      state: next,
-    };
-    const nextHistory = [entry, ...history].slice(0, 50);
     const channel = new BroadcastChannel(CHANNEL_NAME);
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(nextHistory));
     channel.postMessage(next);
     channel.close();
     setMatch(next);
     setDraft(next);
-    setHistory(nextHistory);
+  }
+
+  function saveRecordings(nextRecordings: MatchRecording[]) {
+    const trimmedRecordings = nextRecordings.slice(0, 100);
+
+    localStorage.setItem(RECORDINGS_KEY, JSON.stringify(trimmedRecordings));
+    setRecordings(trimmedRecordings);
+  }
+
+  function startMatch() {
+    const startedAt = new Date().toISOString();
+    const recording: MatchRecording = {
+      id: crypto.randomUUID(),
+      startedAt,
+      startedState: {
+        ...draft,
+        updatedAt: startedAt,
+      },
+    };
+
+    saveRecordings([recording, ...recordings]);
+  }
+
+  function endMatch() {
+    if (!activeRecording) {
+      return;
+    }
+
+    const endedAt = new Date().toISOString();
+    const nextRecordings = recordings.map((recording) => {
+      if (recording.id !== activeRecording.id) {
+        return recording;
+      }
+
+      return {
+        ...recording,
+        endedAt,
+        endedState: {
+          ...draft,
+          updatedAt: endedAt,
+        },
+      };
+    });
+
+    saveRecordings(nextRecordings);
   }
 
   function updatePlayer(side: PlayerSide, player: Partial<Player>) {
@@ -306,24 +456,57 @@ function App() {
             obs-websocket if you later want scene/source automation.
           </p>
 
+          <div className="recording-controls">
+            <div>
+              <p className="eyebrow">Recorder</p>
+              <h2>Match timer</h2>
+            </div>
+            <div className="obs-clock">{formatClock(obsElapsedSeconds)}</div>
+            <p className="recording-state">
+              {obsAvailable
+                ? obsOutputActive
+                  ? "OBS is streaming or recording."
+                  : "Waiting for OBS stream or recording."
+                : "OBS status is only available inside an OBS Browser Source."}
+            </p>
+            {activeRecording ? (
+              <p className="recording-state">
+                Started {formatTime(activeRecording.startedAt)}
+              </p>
+            ) : (
+              <p className="recording-state">Ready to record the next match.</p>
+            )}
+            <button
+              type="button"
+              className={activeRecording ? "record-button is-recording" : "record-button"}
+              onClick={activeRecording ? endMatch : startMatch}
+            >
+              {activeRecording ? "End match" : "Start match"}
+            </button>
+          </div>
+
           <div className="history-list">
             <div>
               <p className="eyebrow">Audit Log</p>
-              <h2>Recent saves</h2>
+              <h2>Recorded matches</h2>
             </div>
-            {history.length === 0 ? (
-              <p className="empty-state">No scoreboard saves recorded yet.</p>
+            {recordings.length === 0 ? (
+              <p className="empty-state">No matches recorded yet.</p>
             ) : (
-              history.map((entry) => (
-                <article className="history-item" key={entry.id}>
+              recordings.map((recording) => (
+                <article className="history-item" key={recording.id}>
                   <strong>
-                    {entry.state.left.name} {entry.state.left.score} -{" "}
-                    {entry.state.right.score} {entry.state.right.name}
+                    {recording.startedState.left.name || "Player 1"} vs{" "}
+                    {recording.startedState.right.name || "Player 2"}
                   </strong>
-                  <span>{formatTime(entry.changedAt)}</span>
+                  <span>
+                    {formatTime(recording.startedAt)}
+                    {recording.endedAt ? ` - ${formatTime(recording.endedAt)}` : ""}
+                  </span>
                   <small>
-                    {entry.state.left.character} vs{" "}
-                    {entry.state.right.character}
+                    {recording.startedState.left.character || "Unknown"} vs{" "}
+                    {recording.startedState.right.character || "Unknown"} |{" "}
+                    {getDuration(recording.startedAt, recording.endedAt)}
                   </small>
                 </article>
               ))
