@@ -250,6 +250,27 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (!isOverlay) {
+      return;
+    }
+
+    const interval = window.setInterval(async () => {
+      try {
+        const res = await fetch('http://127.0.0.1:3001/api/state');
+        const data = await res.json();
+
+        if (data) {
+          setMatch(data);
+        }
+      } catch {
+        // Ignore fetch errors while overlay is loading or server is unavailable.
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isOverlay]);
+
+  useEffect(() => {
     const obs = window.obsstudio;
 
     if (!obs) {
@@ -309,18 +330,34 @@ function App() {
     return () => window.clearInterval(timer);
   }, [obsClockStartedAt, obsOutputActive]);
 
-  function saveDraft() {
-    const next = {
-      ...draft,
-      updatedAt: new Date().toISOString(),
-    };
-    const channel = new BroadcastChannel(CHANNEL_NAME);
+  // function saveDraft() {
+  //   const next = {
+  //     ...draft,
+  //     updatedAt: new Date().toISOString(),
+  //   };
+  //   const channel = new BroadcastChannel(CHANNEL_NAME);
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    channel.postMessage(next);
-    channel.close();
-    setMatch(next);
-    setDraft(next);
+  //   localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  //   channel.postMessage(next);
+  //   channel.close();
+  //   setMatch(next);
+  //   setDraft(next);
+  // }
+
+  async function saveDraft() {
+    const next = { 
+        ...draft, 
+        updatedAt: new Date().toISOString(),
+    };
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+    await fetch('http://localhost:3001/api/state', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(next)
+    })
+    setMatch(next)
+    setDraft(next)
   }
 
   function saveRecordings(nextRecordings: MatchRecording[]) {
