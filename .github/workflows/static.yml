@@ -31,17 +31,19 @@ jobs:
 
       - name: Install dependencies  # ← NEW
         run: npm install
+        working-directory: ./frontend   # ← change to whatever your subfolder is named
 
-      - name: Build               # ← NEW
+      - name: Build  # ← NEW
         run: npm run build
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
+        working-directory: ./frontend
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './dist' # <-- deploy the built output, not source
+          path: './frontend/dist'       # ← update this too
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
 
       - name: Deploy to GitHub Pages
         id: deployment
