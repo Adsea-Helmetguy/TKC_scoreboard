@@ -1,5 +1,9 @@
+"use client";
+
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import "./App.css";
+
+type ViewMode = "editor" | "overlay" | "history";
 
 type PlayerSide = "left" | "right";
 
@@ -54,6 +58,7 @@ declare global {
   }
 }
 
+const BASE_PATH = "/TKC_scoreboard";
 const STORAGE_KEY = "tkc-scoreboard-state";
 const RECORDINGS_KEY = "tkc-match-recordings";
 const CHANNEL_NAME = "tkc-scoreboard-updates";
@@ -180,21 +185,24 @@ function formatClock(totalSeconds: number) {
     .join(":");
 }
 
-function App() {
-  const isOverlay =
-    new URLSearchParams(window.location.search).get("view") === "overlay";
-  const [match, setMatch] = useState<MatchState>(() => loadState());
-  const [draft, setDraft] = useState<MatchState>(() => loadState());
-  const [recordings, setRecordings] = useState<MatchRecording[]>(() =>
-    loadRecordings(),
-  );
-  const [obsAvailable] = useState(() => Boolean(window.obsstudio));
+type ScoreboardAppProps = {
+  mode?: ViewMode;
+};
+
+function ScoreboardApp({ mode = "editor" }: ScoreboardAppProps) {
+  const isOverlay = mode === "overlay";
+  const isHistory = mode === "history";
+  const [match, setMatch] = useState<MatchState>(defaultState);
+  const [draft, setDraft] = useState<MatchState>(defaultState);
+  const [recordings, setRecordings] = useState<MatchRecording[]>([]);
+  const [obsAvailable, setObsAvailable] = useState(false);
   const [obsOutputActive, setObsOutputActive] = useState(false);
   const [obsClockStartedAt, setObsClockStartedAt] = useState<number | null>(
     null,
   );
   const [obsElapsedSeconds, setObsElapsedSeconds] = useState(0);
   const [isGameMenuOpen, setIsGameMenuOpen] = useState(false);
+  const [overlayUrl, setOverlayUrl] = useState("");
   const activeRecording = recordings.find((recording) => !recording.endedAt);
   const recordingGroups = useMemo<RecordingGroup[]>(() => {
     return recordings.reduce<RecordingGroup[]>((groups, recording) => {
@@ -245,8 +253,13 @@ function App() {
     };
   }, []);
 
-  const overlayUrl = useMemo(() => {
-    return `${window.location.origin}${window.location.pathname}?view=overlay`;
+  useEffect(() => {
+    const savedState = loadState();
+    setMatch(savedState);
+    setDraft(savedState);
+    setRecordings(loadRecordings());
+    setObsAvailable(Boolean(window.obsstudio));
+    setOverlayUrl(`${window.location.origin}${BASE_PATH}/overlay`);
   }, []);
 
   useEffect(() => {
@@ -256,7 +269,7 @@ function App() {
 
     const interval = window.setInterval(async () => {
       try {
-        const res = await fetch('http://127.0.0.1:3001/api/state');
+        const res = await fetch("http://127.0.0.1:3001/api/state");
         const data = await res.json();
 
         if (data) {
@@ -330,34 +343,20 @@ function App() {
     return () => window.clearInterval(timer);
   }, [obsClockStartedAt, obsOutputActive]);
 
-  // function saveDraft() {
-  //   const next = {
-  //     ...draft,
-  //     updatedAt: new Date().toISOString(),
-  //   };
-  //   const channel = new BroadcastChannel(CHANNEL_NAME);
-
-  //   localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  //   channel.postMessage(next);
-  //   channel.close();
-  //   setMatch(next);
-  //   setDraft(next);
-  // }
-
   async function saveDraft() {
-    const next = { 
-        ...draft, 
-        updatedAt: new Date().toISOString(),
+    const next = {
+      ...draft,
+      updatedAt: new Date().toISOString(),
     };
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
-    await fetch('http://localhost:3001/api/state', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(next)
-    })
-    setMatch(next)
-    setDraft(next)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    await fetch("http://localhost:3001/api/state", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(next),
+    });
+    setMatch(next);
+    setDraft(next);
   }
 
   function saveRecordings(nextRecordings: MatchRecording[]) {
@@ -461,8 +460,81 @@ function App() {
     return `${name}(${character})`;
   }
 
+  function renderHistoryList() {
+    return (
+      <div className="history-list">
+        <div className="history-heading">
+          <div>
+            <p className="eyebrow">Audit Log</p>
+            <h2>Recorded matches</h2>
+          </div>
+          <button
+            type="button"
+            className="clear-history-button"
+            onClick={clearRecordings}
+            disabled={recordings.length === 0}
+          >
+            Clear history
+          </button>
+        </div>
+        {recordings.length === 0 ? (
+          <p className="empty-state">No matches recorded yet.</p>
+        ) : (
+          recordingGroups.map((group) => (
+            <details
+              className="history-day"
+              key={group.dateKey}
+              open={group === recordingGroups[0]}
+            >
+              <summary>
+                <span>{group.dateLabel}</span>
+                <small>{group.recordings.length} matches</small>
+              </summary>
+              {group.recordings.map((recording) => (
+                <article className="history-item" key={recording.id}>
+                  <strong className="timeline-entry">
+                    {getRecordingTimeline(recording)} |{" "}
+                    {getPlayerTimelineLabel(recording.startedState.left, "Player 1")}{" "}
+                    vs{" "}
+                    {getPlayerTimelineLabel(
+                      recording.startedState.right,
+                      "Player 2",
+                    )}
+                  </strong>
+                </article>
+              ))}
+            </details>
+          ))
+        )}
+      </div>
+    );
+  }
+
   if (isOverlay) {
-    return <ScoreboardOverlay match={match} />;
+    return (
+      <main className="overlay-shell">
+        <ScoreboardOverlay match={match} />
+      </main>
+    );
+  }
+
+  if (isHistory) {
+    return (
+      <main className="app-shell history-shell">
+        <header className="topbar">
+          <div>
+            <p className="eyebrow">Tournament Scoreboard</p>
+            <h1>Match History</h1>
+          </div>
+          <nav className="page-nav">
+            <Link href="/">Editor</Link>
+            <Link href="/overlay">Overlay</Link>
+          </nav>
+        </header>
+
+        <section className="history-page-card">{renderHistoryList()}</section>
+      </main>
+    );
   }
 
   const activeRoster = gameRosters[draft.gameTitle] ?? [];
@@ -473,6 +545,10 @@ function App() {
         <div>
           <h1>Tournament Scoreboard</h1>
         </div>
+        <nav className="page-nav">
+          <Link href="/overlay">Overlay</Link>
+          <Link href="/history">History</Link>
+        </nav>
         <div className={`connection-pill ${!obsAvailable ? "is-disconnected" : ""}`}>
           <span className="status-dot" aria-hidden="true"></span>
           {obsAvailable ? "OBS Browser Source Ready" : "OBS Browser Source Disconnected"}
@@ -666,54 +742,7 @@ function App() {
             </button>
           </div>
 
-          <div className="history-list">
-            <div className="history-heading">
-              <div>
-                <p className="eyebrow">Audit Log</p>
-                <h2>Recorded matches</h2>
-              </div>
-              <button
-                type="button"
-                className="clear-history-button"
-                onClick={clearRecordings}
-                disabled={recordings.length === 0}
-              >
-                Clear history
-              </button>
-            </div>
-            {recordings.length === 0 ? (
-              <p className="empty-state">No matches recorded yet.</p>
-            ) : (
-              recordingGroups.map((group) => (
-                <details
-                  className="history-day"
-                  key={group.dateKey}
-                  open={group === recordingGroups[0]}
-                >
-                  <summary>
-                    <span>{group.dateLabel}</span>
-                    <small>{group.recordings.length} matches</small>
-                  </summary>
-                  {group.recordings.map((recording) => (
-                    <article className="history-item" key={recording.id}>
-                      <strong className="timeline-entry">
-                        {getRecordingTimeline(recording)} |{" "}
-                        {getPlayerTimelineLabel(
-                          recording.startedState.left,
-                          "Player 1",
-                        )}{" "}
-                        vs{" "}
-                        {getPlayerTimelineLabel(
-                          recording.startedState.right,
-                          "Player 2",
-                        )}
-                      </strong>
-                    </article>
-                  ))}
-                </details>
-              ))
-            )}
-          </div>
+          {renderHistoryList()}
         </aside>
       </section>
     </main>
@@ -822,4 +851,4 @@ function ScoreboardOverlay({ match, compact = false }: OverlayProps) {
   );
 }
 
-export default App;
+export default ScoreboardApp;
