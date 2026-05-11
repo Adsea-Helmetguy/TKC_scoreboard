@@ -527,7 +527,7 @@ function App() {
           <div className="recording-controls">
             <div>
               <p className="eyebrow">Recorder</p>
-              <h2>Match timer</h2>
+              <h2>Tournament Timer</h2>
             </div>
             <div className="obs-clock">{formatClock(obsElapsedSeconds)}</div>
             <p className="recording-state">
