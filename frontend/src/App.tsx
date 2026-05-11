@@ -1,52 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import "./App.css";
-
-type PlayerSide = "left" | "right";
-
-type Player = {
-  name: string;
-  score: number;
-  character: string;
-};
-
-type MatchState = {
-  id: string;
-  eventName: string;
-  gameTitle: string;
-  round: string;
-  bestOf: string;
-  left: Player;
-  right: Player;
-  updatedAt: string;
-};
-
-type MatchRecording = {
-  id: string;
-  startedAt: string;
-  endedAt?: string;
-  startedTimelineSeconds?: number;
-  endedTimelineSeconds?: number;
-  startedState: MatchState;
-  endedState?: MatchState;
-};
-
-type RecordingGroup = {
-  dateKey: string;
-  dateLabel: string;
-  recordings: MatchRecording[];
-};
-
-type ObsStatus = {
-  recording: boolean;
-  recordingPaused: boolean;
-  streaming: boolean;
-  replaybuffer: boolean;
-  virtualcam: boolean;
-};
-
-type ObsStudioApi = {
-  getStatus: (callback: (status: ObsStatus) => void) => void;
-};
+//for websocket
+import { useScoreboardSocket } from "./hooks/useScoreboardSocket";
+import type { MatchRecording, RecordingGroup } from "./types/recording";
+import type { Player, PlayerSide, MatchState } from "./types/scoreboard";
+import type { ObsStatus, ObsStudioApi } from "./types/obs";
 
 declare global {
   interface Window {
@@ -89,8 +47,8 @@ const defaultState: MatchState = {
   id: "sea-main",
   eventName: "SEA-INBIRTHS Online Tournament",
   gameTitle: "",
-  round: "Round 1",
-  bestOf: "Best of 5",
+  round: "Round Robin 1",
+  bestOf: "First to 3",
   left: {
     name: "",
     score: 0,
