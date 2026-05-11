@@ -11,10 +11,12 @@
     "server": "tsx watch server/index.ts"
   },
   "dependencies": {
+    "@types/ws": "^8.18.1",
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "react": "^19.2.5",
-    "react-dom": "^19.2.5"
+    "react-dom": "^19.2.5",
+    "ws": "^8.20.0"
   },
   "devDependencies": {
     "@babel/core": "^7.29.0",

@@ -1,9 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import "./App.css";
-//for websocket
+import { ScoreboardOverlay } from "./components/ScoreboardOverlay";
 import { useScoreboardSocket } from "./hooks/useScoreboardSocket";
 import type { MatchRecording, RecordingGroup } from "./types/recording";
-import type { Player, PlayerSide, MatchState } from "./types/scoreboard";
+import {
+  createDefaultMatchState,
+  type MatchState,
+  type Player,
+  type PlayerSide,
+} from "./types/scoreboard";
 import type { ObsStatus, ObsStudioApi } from "./types/obs";
 
 declare global {
@@ -14,8 +19,6 @@ declare global {
 
 const STORAGE_KEY = "tkc-scoreboard-state";
 const RECORDINGS_KEY = "tkc-match-recordings";
-const CHANNEL_NAME = "tkc-scoreboard-updates";
-
 const gameRosters: Record<string, string[]> = {
   "Street Fighter 6": ["Ryu", "Ken", "Chun-Li", "Luke"],
   "Tekken 8": ["Jin", "Kazuya", "King", "Nina"],
@@ -43,36 +46,17 @@ const gameRosters: Record<string, string[]> = {
   ],
 };
 
-const defaultState: MatchState = {
-  id: "sea-main",
-  eventName: "SEA-INBIRTHS Online Tournament",
-  gameTitle: "",
-  round: "Round Robin 1",
-  bestOf: "First to 3",
-  left: {
-    name: "",
-    score: 0,
-    character: "",
-  },
-  right: {
-    name: "",
-    score: 0,
-    character: "",
-  },
-  updatedAt: new Date().toISOString(),
-};
-
 function loadState(): MatchState {
   const saved = localStorage.getItem(STORAGE_KEY);
 
   if (!saved) {
-    return defaultState;
+    return createDefaultMatchState();
   }
 
   try {
-    return { ...defaultState, ...JSON.parse(saved) } as MatchState;
+    return { ...createDefaultMatchState(), ...JSON.parse(saved) } as MatchState;
   } catch {
-    return defaultState;
+    return createDefaultMatchState();
   }
 }
 
@@ -140,9 +124,6 @@ function formatClock(totalSeconds: number) {
 }
 
 function App() {
-  const isOverlay =
-    new URLSearchParams(window.location.search).get("view") === "overlay";
-  const [match, setMatch] = useState<MatchState>(() => loadState());
   const [draft, setDraft] = useState<MatchState>(() => loadState());
   const [recordings, setRecordings] = useState<MatchRecording[]>(() =>
     loadRecordings(),
@@ -154,6 +135,8 @@ function App() {
   );
   const [obsElapsedSeconds, setObsElapsedSeconds] = useState(0);
   const [isGameMenuOpen, setIsGameMenuOpen] = useState(false);
+  const socketUrl = "ws://localhost:3001";
+  const { sendState } = useScoreboardSocket(socketUrl, setDraft);
   const activeRecording = recordings.find((recording) => !recording.endedAt);
   const recordingGroups = useMemo<RecordingGroup[]>(() => {
     return recordings.reduce<RecordingGroup[]>((groups, recording) => {
@@ -177,17 +160,9 @@ function App() {
   }, [recordings]);
 
   useEffect(() => {
-    const channel = new BroadcastChannel(CHANNEL_NAME);
-
-    channel.onmessage = (event: MessageEvent<MatchState>) => {
-      setMatch(event.data);
-      setDraft(event.data);
-    };
-
     const handleStorage = (event: StorageEvent) => {
       if (event.key === STORAGE_KEY && event.newValue) {
         const next = JSON.parse(event.newValue) as MatchState;
-        setMatch(next);
         setDraft(next);
       }
 
@@ -199,7 +174,6 @@ function App() {
     window.addEventListener("storage", handleStorage);
 
     return () => {
-      channel.close();
       window.removeEventListener("storage", handleStorage);
     };
   }, []);
@@ -207,27 +181,6 @@ function App() {
   const overlayUrl = useMemo(() => {
     return `${window.location.origin}${window.location.pathname}?view=overlay`;
   }, []);
-
-  useEffect(() => {
-    if (!isOverlay) {
-      return;
-    }
-
-    const interval = window.setInterval(async () => {
-      try {
-        const res = await fetch('http://127.0.0.1:3001/api/state');
-        const data = await res.json();
-
-        if (data) {
-          setMatch(data);
-        }
-      } catch {
-        // Ignore fetch errors while overlay is loading or server is unavailable.
-      }
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [isOverlay]);
 
   useEffect(() => {
     const obs = window.obsstudio;
@@ -289,34 +242,15 @@ function App() {
     return () => window.clearInterval(timer);
   }, [obsClockStartedAt, obsOutputActive]);
 
-  // function saveDraft() {
-  //   const next = {
-  //     ...draft,
-  //     updatedAt: new Date().toISOString(),
-  //   };
-  //   const channel = new BroadcastChannel(CHANNEL_NAME);
-
-  //   localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  //   channel.postMessage(next);
-  //   channel.close();
-  //   setMatch(next);
-  //   setDraft(next);
-  // }
-
   async function saveDraft() {
-    const next = { 
-        ...draft, 
-        updatedAt: new Date().toISOString(),
+    const next = {
+      ...draft,
+      updatedAt: new Date().toISOString(),
     };
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
-    await fetch('http://localhost:3001/api/state', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(next)
-    })
-    setMatch(next)
-    setDraft(next)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    setDraft(next);
+    sendState(next);
   }
 
   function saveRecordings(nextRecordings: MatchRecording[]) {
@@ -418,10 +352,6 @@ function App() {
     const character = player.character || "Unknown";
 
     return `${name}(${character})`;
-  }
-
-  if (isOverlay) {
-    return <ScoreboardOverlay match={match} />;
   }
 
   const activeRoster = gameRosters[draft.gameTitle] ?? [];
@@ -754,30 +684,6 @@ function PlayerEditor({
         </button>
       </div>
     </section>
-  );
-}
-
-type OverlayProps = {
-  match: MatchState;
-  compact?: boolean;
-};
-
-function ScoreboardOverlay({ match, compact = false }: OverlayProps) {
-  return (
-    <div className={compact ? "scoreboard compact" : "scoreboard"}>
-      <div className="score-name left-name">
-        {match.left.name || "Player 1"}
-      </div>
-      <div className="score-value">{match.left.score}</div>
-      <div className="round-block">
-        <span>{match.round || "Round"}</span>
-        <small>{match.eventName}</small>
-      </div>
-      <div className="score-value">{match.right.score}</div>
-      <div className="score-name right-name">
-        {match.right.name || "Player 2"}
-      </div>
-    </div>
   );
 }
 

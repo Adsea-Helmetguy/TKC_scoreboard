@@ -1,4 +1,3 @@
-// frontend/src/hooks/useScoreboardSocket.ts
 import { useEffect, useRef } from "react";
 import type { MatchState, SocketMessage } from "../types/scoreboard";
 
@@ -7,16 +6,29 @@ export function useScoreboardSocket(
   onState: (state: MatchState) => void,
 ) {
   const socketRef = useRef<WebSocket | null>(null);
+  const queuedStateRef = useRef<MatchState | null>(null);
 
   useEffect(() => {
     const socket = new WebSocket(url);
     socketRef.current = socket;
 
-    socket.onmessage = (event) => {
-      const msg = JSON.parse(event.data) as SocketMessage;
+    socket.onopen = () => {
+      if (queuedStateRef.current) {
+        socket.send(
+          JSON.stringify({
+            type: "state",
+            payload: queuedStateRef.current,
+          } satisfies SocketMessage),
+        );
+        queuedStateRef.current = null;
+      }
+    };
 
-      if (msg.type === "state") {
-        onState(msg.payload);
+    socket.onmessage = (event) => {
+      const message = JSON.parse(event.data) as SocketMessage;
+
+      if (message.type === "state") {
+        onState(message.payload);
       }
     };
 
@@ -24,15 +36,21 @@ export function useScoreboardSocket(
       socket.close();
       socketRef.current = null;
     };
-  }, [url, onState]);
+  }, [onState, url]);
 
   function sendState(state: MatchState) {
-    socketRef.current?.send(
-      JSON.stringify({
-        type: "state",
-        payload: state,
-      }),
-    );
+    const socket = socketRef.current;
+    const payload = JSON.stringify({
+      type: "state",
+      payload: state,
+    } satisfies SocketMessage);
+
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(payload);
+      return;
+    }
+
+    queuedStateRef.current = state;
   }
 
   return { sendState };

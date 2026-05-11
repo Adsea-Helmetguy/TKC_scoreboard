@@ -1,6 +1,4 @@
-// frontend/src/types/scoreboard.ts (used in App.tsx)
 import type { MatchState } from "./scoreboard";
-
 
 export type MatchRecording = {
   id: string;
