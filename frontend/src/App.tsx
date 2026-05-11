@@ -9,7 +9,7 @@ import {
   type Player,
   type PlayerSide,
 } from "./types/scoreboard";
-import type { ObsStatus, ObsStudioApi } from "./types/obs";
+import type { ObsStudioApi } from "./types/obs";
 
 declare global {
   interface Window {
