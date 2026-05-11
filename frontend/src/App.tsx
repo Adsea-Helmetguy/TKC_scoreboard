@@ -81,6 +81,7 @@ const gameRosters: Record<string, string[]> = {
     "Wagner",
     "Enkidu",
     "Londrekia",
+    "Orge",
   ],
 };
 
