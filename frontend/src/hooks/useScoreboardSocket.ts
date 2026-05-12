@@ -12,7 +12,6 @@ export function useScoreboardSocket(
   const socketRef = useRef<WebSocket | null>(null);
   const queuedStateRef = useRef<MatchState | null>(null);
   const effectRan = useRef(false);
-  let msg_counter = 0;
 
   /*
   async function fetchData() {
@@ -59,12 +58,6 @@ export function useScoreboardSocket(
       if (effectRan.current === true) {
         effectRan.current = false;
       }
-      if (websocket && websocket.readyState === WebSocket.OPEN && effectRan.current === false) {
-        websocket.send(JSON.stringify({
-          type: "goodbye",
-          payload: "Goodbye from client!",
-        } satisfies SocketMessage));
-      }
       console.log("addEventListener(close): (", url, "): code=", event.code, "reason=", event.reason);
     });
 
@@ -75,7 +68,6 @@ export function useScoreboardSocket(
       if (message.type === "state") {
         onState(message.payload);
       }
-      msg_counter++;
     });
 
     websocket.addEventListener("error", () => {
@@ -88,7 +80,6 @@ export function useScoreboardSocket(
       console.log("Closing websocket connection to", url);
       websocket.close();
       socketRef.current = null;
-      console.log("Total msg counters for (", url, "): [", msg_counter, "]");
     };
   }, [onState, url]); // reconnects if url changes — re-run setup+cleanup whenever these change
 
