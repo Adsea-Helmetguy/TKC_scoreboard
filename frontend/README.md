@@ -1,4 +1,52 @@
-# React + TypeScript + Vite
+# README
+
+## Instructions on how to use
+Run these two in two different terminals:
+1) npm run dev
+2) npm run server
+
+then go to your localhost or in the npm run dev terminal,
+write 'o' and press enter to go to the localhost website
+with your internet of choice.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
@@ -72,4 +120,4 @@ export default defineConfig([
     },
   },
 ])
-```
+``` -->

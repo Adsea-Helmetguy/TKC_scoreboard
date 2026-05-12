@@ -1,6 +1,10 @@
 import { useEffect, useRef } from "react";
 import type { MatchState, SocketMessage } from "../types/scoreboard";
 
+const date = new Date();
+const showTime = date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds();
+
+
 export function useScoreboardSocket(
   url: string,
   onState: (state: MatchState) => void,
@@ -66,7 +70,7 @@ export function useScoreboardSocket(
 
     websocket.addEventListener("message", (event) => {
       const message = JSON.parse(event.data) as SocketMessage;
-      console.log("Message received from (", url, "): \"", event.data, "\"");
+      console.log("---TIME: [", showTime, "]---\n", "Message received from (", url, "): \"", event.data, "\"");
 
       if (message.type === "state") {
         onState(message.payload);
