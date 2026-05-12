@@ -1,12 +1,5 @@
 import { useEffect, useRef } from "react";
-// import { useState } from "react";
 import type { MatchState, SocketMessage } from "../types/scoreboard";
-
-// const [logs, setLogs] = useState<string[]>([]);
-
-// function log(text: string) {
-//   setLogs(prev => [...prev, text]);
-// }
 
 export function useScoreboardSocket(
   url: string,
@@ -14,9 +7,31 @@ export function useScoreboardSocket(
 ) {
   const socketRef = useRef<WebSocket | null>(null);
   const queuedStateRef = useRef<MatchState | null>(null);
+  const effectRan = useRef(false);
+
+  /*
+  async function fetchData() {
+    try {
+      const response = await fetch("/api/state");
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const rsult = await response.json() as MatchState;
+      return result;
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  }
+  */
 
   // Deferred until after React has painted the DOM
   useEffect(() => {
+    if (effectRan.current === false) {
+      console.log("useEFFECT RUNNING............")
+      // fetchData(); // Use async function to fetch data here if needed
+      effectRan.current = true;
+    }
+
     // 1. SETUP — runs after component mounts
     const websocket = new WebSocket(url);
     socketRef.current = websocket; // stored in ref so sendState() can access it
@@ -37,7 +52,7 @@ export function useScoreboardSocket(
 
     websocket.addEventListener("message", (event) => {
       const message = JSON.parse(event.data) as SocketMessage;
-      console.log("Message received: \"", event.data, "\"");
+      console.log("Message received from (", url, "): \"", event.data, "\"");
 
       if (message.type === "state") {
         onState(message.payload);
@@ -45,17 +60,22 @@ export function useScoreboardSocket(
     });
 
     websocket.addEventListener("error", () => {
-      console.log("404 - Socket error / Disconnected"); // shows in page inspect[F12] console
+      console.log("404 - Socket error / Disconnected from url(", url, ")"); // shows in page inspect[F12] console
     });
 
     // Closing websocket when component unmounts or url changes
     return () => {
-      websocket.send(JSON.stringify({
-        type: "goodbye",
-        payload: "Goodbye from cilent!",
-      } satisfies SocketMessage));
+      if (websocket.readyState === WebSocket.OPEN) {
+        websocket.send(JSON.stringify({
+          type: "goodbye",
+          payload: "Goodbye from client!",
+        } satisfies SocketMessage));
+      } else {
+        console.log("Websocket still not in OPEN state for(", url, ")"); 
+     }
 
       // 2. CLEANUP — runs before component unmounts, or before re-running
+      console.log("Closing websocket connection to", url);
       websocket.close();
       socketRef.current = null;
     };
