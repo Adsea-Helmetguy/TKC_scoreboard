@@ -28,7 +28,7 @@ export function createDefaultMatchState(): MatchState {
     eventName: "SEA-INBIRTHS Online Tournament",
     gameTitle: "",
     round: "Round 1",
-    bestOf: "Best of 5",
+    bestOf: "First to 3",
     left: {
       name: "",
       score: 0,

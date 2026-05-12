@@ -8,6 +8,7 @@ export function useScoreboardSocket(
   const socketRef = useRef<WebSocket | null>(null);
   const queuedStateRef = useRef<MatchState | null>(null);
   const effectRan = useRef(false);
+  let msg_counter = 0;
 
   /*
   async function fetchData() {
@@ -16,7 +17,7 @@ export function useScoreboardSocket(
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const rsult = await response.json() as MatchState;
+      const result = await response.json() as MatchState;
       return result;
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -50,6 +51,19 @@ export function useScoreboardSocket(
       }
     });
 
+    websocket.addEventListener("close", (event) => {
+      if (effectRan.current === true) {
+        effectRan.current = false;
+      }
+      if (websocket && websocket.readyState === WebSocket.OPEN && effectRan.current === false) {
+        websocket.send(JSON.stringify({
+          type: "goodbye",
+          payload: "Goodbye from client!",
+        } satisfies SocketMessage));
+      }
+      console.log("addEventListener(close): (", url, "): code=", event.code, "reason=", event.reason);
+    });
+
     websocket.addEventListener("message", (event) => {
       const message = JSON.parse(event.data) as SocketMessage;
       console.log("Message received from (", url, "): \"", event.data, "\"");
@@ -57,6 +71,7 @@ export function useScoreboardSocket(
       if (message.type === "state") {
         onState(message.payload);
       }
+      msg_counter++;
     });
 
     websocket.addEventListener("error", () => {
@@ -65,19 +80,11 @@ export function useScoreboardSocket(
 
     // Closing websocket when component unmounts or url changes
     return () => {
-      if (websocket.readyState === WebSocket.OPEN) {
-        websocket.send(JSON.stringify({
-          type: "goodbye",
-          payload: "Goodbye from client!",
-        } satisfies SocketMessage));
-      } else {
-        console.log("Websocket still not in OPEN state for(", url, ")"); 
-     }
-
-      // 2. CLEANUP — runs before component unmounts, or before re-running
+      // CLEANUP — runs before component unmounts, or before re-running
       console.log("Closing websocket connection to", url);
       websocket.close();
       socketRef.current = null;
+      console.log("Total msg counters for (", url, "): [", msg_counter, "]");
     };
   }, [onState, url]); // reconnects if url changes — re-run setup+cleanup whenever these change
 
