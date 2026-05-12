@@ -18,7 +18,8 @@ export type MatchState = {
 };
 
 export type SocketMessage =
-  | { type: "hello" }
+  | { type: "hello"; payload: string }
+  | { type: "goodbye"; payload: string }
   | { type: "state"; payload: MatchState };
 
 export function createDefaultMatchState(): MatchState {

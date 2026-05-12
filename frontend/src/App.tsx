@@ -364,7 +364,7 @@ function App() {
         </div>
         <div className={`connection-pill ${!obsAvailable ? "is-disconnected" : ""}`}>
           <span className="status-dot" aria-hidden="true"></span>
-          {obsAvailable ? "OBS Browser Source Ready" : "OBS Browser Source Disconnected"}
+          {obsAvailable ? "OBS Browser Source Connected" : "OBS Browser Source Disconnected"}
         </div>
       </header>
 
