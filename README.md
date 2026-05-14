@@ -1,4 +1,4 @@
-# TKC_scoreboard
+# ATSEA_Scoreboard
 
 ## Targets (ongoing)
 - get the timer to work
