@@ -372,7 +372,7 @@ function App() {
       <section className="preview-band" aria-label="Live scoreboard preview">
         <div className="preview-band-header">
           <label>
-            Event name
+            Event Organiser
             <input
               value={draft.eventName}
               onChange={(event) =>
