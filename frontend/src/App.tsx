@@ -135,7 +135,8 @@ function App() {
   );
   const [obsElapsedSeconds, setObsElapsedSeconds] = useState(0);
   const [isGameMenuOpen, setIsGameMenuOpen] = useState(false);
-  const socketUrl = "ws://localhost:3001";
+  const socketUrl =
+    import.meta.env.VITE_SCOREBOARD_WS_URL ?? "ws://localhost:3001";
   const { sendState } = useScoreboardSocket(socketUrl, setDraft);
   const activeRecording = recordings.find((recording) => !recording.endedAt);
   const recordingGroups = useMemo<RecordingGroup[]>(() => {

@@ -100,6 +100,17 @@ app.post("/api/state", (req, res) => {
   res.json({ ok: true });
 });
 
-server.listen(3001, "0.0.0.0", () => {
-  console.log("WebSocket server running on :3001");
+// const port = Number(process.env.PORT ?? 3001);
+const portStr = process.env.PORT;
+const port = portStr ? (() => {
+  const parsed = parseInt(portStr, 10);
+  if (Number.isNaN(parsed)) {
+    console.warn(`Invalid PORT value: ${portStr}, falling back to 3001`);
+    return 3001;
+  }
+  return parsed;
+})() : 3001;
+
+server.listen(port, "0.0.0.0", () => {
+  console.log(`WebSocket server running on :${port}`);
 });
