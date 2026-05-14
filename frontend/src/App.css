@@ -430,8 +430,8 @@ button:disabled {
   overflow: hidden;
   border-radius: 8px;
   color: #fff;
-  background: #1e1f26;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.32);
+  background: transparent;
+  box-shadow: none;
 }
 
 .scoreboard.compact {
