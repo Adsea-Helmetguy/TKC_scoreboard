@@ -19,6 +19,15 @@ declare global {
 
 const STORAGE_KEY = "tkc-scoreboard-state";
 const RECORDINGS_KEY = "tkc-match-recordings";
+const downloadableFiles = [
+  {
+    title: "Under Night In-Birth II scoreboard",
+    description:
+      "Download the HTML overlay package for OBS and keep future overlay files in the same place.",
+    fileName: "UnderNightInbirth2_scoreboard.html",
+    href: `${import.meta.env.BASE_URL}OBS_html_file/UnderNightInbirth2_scoreboard.html`,
+  },
+];
 const gameRosters: Record<string, string[]> = {
   "Street Fighter 6": ["Ryu", "Ken", "Chun-Li", "Luke"],
   "Tekken 8": ["Jin", "Kazuya", "King", "Nina"],
@@ -520,9 +529,32 @@ function App() {
             Overlay URL
             <input value={overlayUrl} readOnly />
           </label>
+
+          <section className="download-section" aria-labelledby="download-files">
+            <div className="download-section-heading">
+              <div>
+                <p className="eyebrow">Downloads</p>
+                <h2 id="download-files">Overlay files</h2>
+              </div>
+            </div>
+            <div className="download-list">
+              {downloadableFiles.map((file) => (
+                <article className="download-card" key={file.fileName}>
+                  <div>
+                    <h3>{file.title}</h3>
+                    <p>{file.description}</p>
+                  </div>
+                  <a className="download-button" href={file.href} download={file.fileName}>
+                    Download
+                  </a>
+                </article>
+              ))}
+            </div>
+          </section>
+
           <p className="helper-text">
-            Add this URL as an OBS Browser Source. OBS Studio 28+ also includes
-            obs-websocket if you later want scene/source automation.
+            Download the file and use it as a browser source in OBS.
+            The file will automatically reflect any changes you made in the website.
           </p>
 
           <div className="recording-controls">
