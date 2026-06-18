@@ -14,7 +14,7 @@ export function ScoreboardOverlay({ match, compact = false }: OverlayProps) {
       <div className="score-value">{match.left.score}</div>
       <div className="round-block">
         <span>{match.round || "Round"}</span>
-        <small>{match.eventName}</small>
+        <small>{match.eventHostName}</small>
       </div>
       <div className="score-value">{match.right.score}</div>
       <div className="score-name right-name">

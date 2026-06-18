@@ -8,7 +8,7 @@ export type Player = {
 
 export type MatchState = {
   id: string;
-  eventName: string;
+  eventHostName: string;
   gameTitle: string;
   round: string;
   bestOf: string;
@@ -25,7 +25,7 @@ export type SocketMessage =
 export function createDefaultMatchState(): MatchState {
   return {
     id: "sea-main",
-    eventName: "SEA-INBIRTHS Online Tournament",
+    eventHostName: "SEA-INBIRTHS",
     gameTitle: "",
     round: "Round 1",
     bestOf: "First to 3",

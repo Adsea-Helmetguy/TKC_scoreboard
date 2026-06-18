@@ -17,6 +17,11 @@ declare global {
   }
 }
 
+/*
+For the downloadable files commands:
+cd OBS_html_file
+zip -r UnderNightInbirth2_scoreboard.zip UnderNightInbirth2_scoreboard.html images
+*/
 const STORAGE_KEY = "tkc-scoreboard-state";
 const RECORDINGS_KEY = "tkc-match-recordings";
 const downloadableFiles = [
@@ -24,11 +29,12 @@ const downloadableFiles = [
     title: "Under Night In-Birth II scoreboard",
     description:
       "Download the HTML overlay package for OBS and keep future overlay files in the same place.",
-    fileName: "UnderNightInbirth2_scoreboard.html",
-    href: `${import.meta.env.BASE_URL}OBS_html_file/UnderNightInbirth2_scoreboard.html`,
+    fileName: "UnderNightInbirth2_scoreboard.zip",
+    href: `${import.meta.env.BASE_URL}OBS_html_file/UnderNightInbirth2_scoreboard.zip`,
   },
 ];
 const gameRosters: Record<string, string[]> = {
+  "<None>": [],
   "Street Fighter 6": ["Ryu", "Ken", "Chun-Li", "Luke"],
   "Tekken 8": ["Jin", "Kazuya", "King", "Nina"],
   "Under Night In-Birth II Sys:Celes": [
@@ -51,7 +57,15 @@ const gameRosters: Record<string, string[]> = {
     "Wagner",
     "Enkidu",
     "Londrekia",
+    "Tsurugi",
+    "Kaguya",
+    "Kuon",
+    "Uzuki",
     "Orge",
+    "Izumi",
+    "Eltnum",
+    "Akatsuki",
+    "Zohar",
   ],
 };
 
@@ -383,9 +397,9 @@ function App() {
           <label>
             Event Organiser
             <input
-              value={draft.eventName}
+              value={draft.eventHostName}
               onChange={(event) =>
-                setDraft({ ...draft, eventName: event.target.value })
+                setDraft({ ...draft, eventHostName: event.target.value })
               }
             />
           </label>
@@ -545,7 +559,7 @@ function App() {
                     <p>{file.description}</p>
                   </div>
                   <a className="download-button" href={file.href} download={file.fileName}>
-                    Download
+                    Download zip folder
                   </a>
                 </article>
               ))}
@@ -553,8 +567,7 @@ function App() {
           </section>
 
           <p className="helper-text">
-            Download the file and use it as a browser source in OBS.
-            The file will automatically reflect any changes you made in the website.
+            Download the file and use it as a browser source in OBS. The file will automatically reflect any changes you made in the website.
           </p>
 
           <div className="recording-controls">
@@ -671,7 +684,7 @@ function PlayerEditor({
         />
       </label>
       <label>
-        Character
+        Select Character
         {roster.length > 0 ? (
           <select
             value={player.character}
@@ -679,7 +692,7 @@ function PlayerEditor({
               onUpdate(side, { character: event.target.value })
             }
           >
-            <option value="">Select character</option>
+            <option value="">Player character</option>
             {roster.map((character) => (
               <option key={character} value={character}>
                 {character}
@@ -695,6 +708,88 @@ function PlayerEditor({
           />
         )}
       </label>
+      <label>
+        WORK ON THIS OKEYYY
+        {(
+          <input
+            value={player.character}
+            onChange={(event) =>
+              onUpdate(side, { character: event.target.value })
+            }
+          />
+        )}
+      </label>
+      {/* 
+      <label>
+        WORK ON THIS OKEYYY
+        {roster.length > 0 ? (
+          <select
+            value={player.character}
+            onChange={(event) =>
+              onUpdate(side, { character: event.target.value })
+            }
+          >
+            <option value="">Player character</option>
+            {roster.map((character) => (
+              <option key={character} value={character}>
+                {character}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <input
+            value={player.character}
+            onChange={(event) =>
+              onUpdate(side, { character: event.target.value })
+            }
+          />
+        )}
+      </label>
+      */}
+      {/* 
+      <label className="game-title-field">
+        Game Title
+        <div className="game-title-input-row">
+          <input
+            value={draft.gameTitle}
+            onBlur={() =>
+              window.setTimeout(() => setIsGameMenuOpen(false), 120)
+            }
+            onChange={(event) => {
+              setDraft({ ...draft, gameTitle: event.target.value });
+              setIsGameMenuOpen(false);
+            }}
+          />
+          <button
+            type="button"
+            aria-label={
+              isGameMenuOpen ? "Hide game list" : "Show game list"
+            }
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => setIsGameMenuOpen((isOpen) => !isOpen)}
+          >
+            {isGameMenuOpen ? "Hide" : "List"}
+          </button>
+        </div>
+        {isGameMenuOpen && (
+          <div className="game-title-menu">
+            {Object.keys(gameRosters).map((gameTitle) => (
+              <button
+                key={gameTitle}
+                type="button"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => {
+                  setDraft({ ...draft, gameTitle });
+                  setIsGameMenuOpen(false);
+                }}
+              >
+                {gameTitle}
+              </button>
+            ))}
+          </div>
+        )}
+      </label> 
+      */}
       <div
         className="score-controls"
         aria-label={`${side} player score controls`}

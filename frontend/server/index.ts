@@ -12,7 +12,7 @@ type Player = {
 
 type MatchState = {
   id: string;
-  eventName: string;
+  eventHostName: string;
   gameTitle: string;
   round: string;
   bestOf: string;
@@ -34,7 +34,7 @@ const wss = new WebSocketServer({ server });
 
 let matchState: MatchState = {
   id: "sea-main",
-  eventName: "SEA-INBIRTHS Online Tournament",
+  eventHostName: "SEA-INBIRTHS",
   gameTitle: "",
   round: "Round 1",
   bestOf: "First to 3",

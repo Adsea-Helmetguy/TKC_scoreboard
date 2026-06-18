@@ -106,7 +106,7 @@
         height: 3.15%;
       }
 
-      #eventName {
+      #eventHostName {
         left: 46.68%;
         top: 4.35%;
         width: 6.72%;
@@ -130,19 +130,19 @@
   </head>
   <body>
     <main class="scoreboard-stage" aria-label="PNG scoreboard websocket test">
-      <img class="scoreboard-image" src="images/UNIscoreboard.png" alt="Scoreboard" />
+      <img class="scoreboard-image" src="images/UNIscoreboard.png" alt="Scoreboard"/>
 
       <p class="scoreboard-text player-name" id="leftName">Player 1</p>
       <p class="scoreboard-text score" id="leftScore">0</p>
       <p class="scoreboard-text round" id="roundLabel">Round 1</p>
-      <p class="scoreboard-text event" id="eventName">SEA-INBIRTHS</p>
+      <p class="scoreboard-text event" id="eventHostName">SEA-INBIRTHS</p>
       <p class="scoreboard-text score" id="rightScore">0</p>
       <p class="scoreboard-text player-name" id="rightName">Player 2</p>
     </main>
 
     <script>
       // Same fields as index.html:
-      // leftName, leftScore, roundLabel, eventName, rightScore, rightName
+      // leftName, leftScore, roundLabel, eventHostName, rightScore, rightName
       //
       const SOCKET_URL = "wss://tkc-scoreboard.onrender.com";
 
@@ -150,7 +150,7 @@
         leftName: document.getElementById("leftName"),
         leftScore: document.getElementById("leftScore"),
         roundLabel: document.getElementById("roundLabel"),
-        eventName: document.getElementById("eventName"),
+        eventHostName: document.getElementById("eventHostName"),
         rightScore: document.getElementById("rightScore"),
         rightName: document.getElementById("rightName"),
       };
@@ -160,7 +160,7 @@
           leftName: match.left?.name || "Player 1",
           leftScore: match.left?.score ?? 0,
           roundLabel: match.round || "Round",
-          eventName: match.eventName || "",
+          eventHostName: match.eventHostName || "",
           rightScore: match.right?.score ?? 0,
           rightName: match.right?.name || "Player 2",
         };
