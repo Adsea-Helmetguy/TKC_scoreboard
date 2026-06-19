@@ -195,7 +195,10 @@ button:focus-visible {
   right: 0;
   left: 0;
   display: grid;
+  max-height: calc(40px * 5);
   overflow: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 6px;
   background: #17181f;

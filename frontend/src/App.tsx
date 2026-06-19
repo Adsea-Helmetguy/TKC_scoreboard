@@ -748,17 +748,15 @@ function PlayerEditor({
         <div className="game-title-input-row">
           <input
             value={player.sideCharactersUsed}
-            onChange={(event) => 
-              onUpdate(side, { sideCharactersUsed: event.target.value }
-            )}
+            onChange={(event) => onUpdate(side, { sideCharactersUsed: event.target.value })}
           />
-          <button 
+          <button
             type="button"
             aria-label={ isCharacterMenuOpen ? "Hide character list" : "Show character list" }
             onMouseDown={(event) => event.preventDefault()}
             onClick={() => setIsCharacterMenuOpen((isOpen) => !isOpen)}
           >
-            {isCharacterMenuOpen ? "Hide" : "List"}
+            {isCharacterMenuOpen ? "Hide" : "Add"}
           </button>
         </div>
         {isCharacterMenuOpen && (

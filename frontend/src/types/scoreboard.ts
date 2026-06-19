@@ -4,7 +4,7 @@ export type Player = {
   name: string;
   score: number;
   character: string;
-  sideCharactersUsed?: string; // Optional property to track characters used on each side
+  sideCharactersUsed: string;
 };
 
 export type MatchState = {
