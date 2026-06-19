@@ -97,12 +97,12 @@ function loadRecordings(): MatchRecording[] {
   }
 }
 
-function formatTime(value: string) {
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "medium",
-  }).format(new Date(value));
-}
+// function formatTime(value: string) {
+//   return new Intl.DateTimeFormat(undefined, {
+//     dateStyle: "medium",
+//     timeStyle: "medium",
+//   }).format(new Date(value));
+// }
 
 function formatDateKey(value: string) {
   const date = new Date(value);
@@ -157,6 +157,28 @@ function App() {
     null,
   );
   const [obsElapsedSeconds, setObsElapsedSeconds] = useState(0);
+
+  // ----add tournament timer state here----
+  const [isTournamentRunning, setIsTournamentRunning] = useState(false);
+  const [tournamentStartedAt, setTournamentStartedAt] = useState<number | null>(
+    null,
+  );
+  const [tournamentElapsedSeconds, setTournamentElapsedSeconds] = useState(0);
+  useEffect(() => {
+    if (!isTournamentRunning || tournamentStartedAt === null) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      setTournamentElapsedSeconds(
+        Math.max(0, Math.floor((Date.now() - tournamentStartedAt) / 1000)),
+      );
+    }, 500);
+
+    return () => window.clearInterval(timer);
+  }, [isTournamentRunning, tournamentStartedAt]);
+  // ----add tournament timer state here----
+
   const [isGameMenuOpen, setIsGameMenuOpen] = useState(false);
   const socketUrl =
     import.meta.env.VITE_SCOREBOARD_WS_URL ?? "ws://localhost:3001";
@@ -378,6 +400,21 @@ function App() {
     return `${name}(${character})`;
   }
 
+  // =====For tournament timer controls=====
+  function startTournament() {
+    setIsTournamentRunning(true);
+    setTournamentStartedAt(Date.now());
+    setTournamentElapsedSeconds(0);
+  }
+
+  function stopTournament() {
+    if (activeRecording) {
+      return;
+    }
+    setIsTournamentRunning(false);
+  }
+  // =====For tournament timer controls=====
+
   const activeRoster = gameRosters[draft.gameTitle] ?? [];
 
   return (
@@ -566,16 +603,13 @@ function App() {
                     <p>{file.description}</p>
                   </div>
                   <a className="download-button" href={file.href} download={file.fileName}>
-                    Download zip folder
+                    Download .zip folder
                   </a>
                 </article>
               ))}
             </div>
           </section>
-
-          <p className="helper-text">
-            Download the file and use it as a browser source in OBS. The file will automatically reflect any changes you made in the website.
-          </p>
+          <br></br>
 
           <div className="recording-controls">
             <div>
@@ -583,25 +617,23 @@ function App() {
               <h2>Tournament Timer</h2>
             </div>
             <div className="obs-clock">{formatClock(obsElapsedSeconds)}</div>
-            <p className="recording-state">
-              {obsAvailable
-                ? obsOutputActive
-                  ? "OBS is streaming or recording."
-                  : "Waiting for OBS stream or recording."
-                : "OBS status is only available inside an OBS Browser Source."}
-            </p>
-            {activeRecording ? (
-              <p className="recording-state">
-                Started {formatTime(activeRecording.startedAt)}
-              </p>
-            ) : (
-              <p className="recording-state">Ready to record the next match.</p>
-            )}
             <button
               type="button"
-              className={
-                activeRecording ? "record-button is-recording" : "record-button"
-              }
+              className={isTournamentRunning ? "record-button is-recording" : "record-button"}
+              disabled={Boolean(activeRecording)}
+              onClick={() => {
+                if (isTournamentRunning) {
+                  stopTournament();
+                } else {
+                  startTournament();
+                }
+              }}
+            >
+              {isTournamentRunning ? "Stop tournament" : "Start tournament"}
+          </button>
+          <button
+              type="button"
+              className={activeRecording ? "record-button is-recording" : "record-button"}
               onClick={activeRecording ? endMatch : startMatch}
             >
               {activeRecording ? "End match" : "Start match"}
