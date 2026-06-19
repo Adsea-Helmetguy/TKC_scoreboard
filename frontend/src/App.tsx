@@ -156,7 +156,7 @@ function App() {
   const [obsClockStartedAt, setObsClockStartedAt] = useState<number | null>(
     null,
   );
-  const [obsElapsedSeconds, setObsElapsedSeconds] = useState(0);
+  // const [obsElapsedSeconds, setObsElapsedSeconds] = useState(0);
 
   // ----add tournament timer state here----
   const [isTournamentRunning, setIsTournamentRunning] = useState(false);
@@ -246,7 +246,7 @@ function App() {
           }
 
           if (!isActive) {
-            setObsElapsedSeconds(0);
+            setTournamentElapsedSeconds(0);
             return null;
           }
 
@@ -280,7 +280,7 @@ function App() {
     }
 
     const timer = window.setInterval(() => {
-      setObsElapsedSeconds(
+      setTournamentElapsedSeconds(
         Math.max(0, Math.floor((Date.now() - obsClockStartedAt) / 1000)),
       );
     }, 500);
@@ -316,7 +316,7 @@ function App() {
     const recording: MatchRecording = {
       id: crypto.randomUUID(),
       startedAt,
-      startedTimelineSeconds: obsElapsedSeconds,
+      startedTimelineSeconds: tournamentElapsedSeconds,
       startedState: {
         ...draft,
         updatedAt: startedAt,
@@ -340,7 +340,7 @@ function App() {
       return {
         ...recording,
         endedAt,
-        endedTimelineSeconds: obsElapsedSeconds,
+        endedTimelineSeconds: tournamentElapsedSeconds,
         endedState: {
           ...draft,
           updatedAt: endedAt,
@@ -388,7 +388,7 @@ function App() {
       (recording.endedAt
         ? startSeconds +
           getDurationSeconds(recording.startedAt, recording.endedAt)
-        : obsElapsedSeconds);
+        : tournamentElapsedSeconds);
 
     return `${formatClock(startSeconds)} - ${formatClock(endSeconds)}`;
   }
@@ -616,7 +616,7 @@ function App() {
               <p className="eyebrow">Recorder</p>
               <h2>Tournament Timer</h2>
             </div>
-            <div className="obs-clock">{formatClock(obsElapsedSeconds)}</div>
+            <div className="obs-clock">{formatClock(tournamentElapsedSeconds)}</div>
             <button
               type="button"
               className={isTournamentRunning ? "record-button is-recording" : "record-button"}
